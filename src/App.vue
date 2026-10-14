@@ -112,6 +112,15 @@
               {{ bookmarks.length }}
               {{ bookmarks.length === 1 ? 'bookmark' : 'bookmarks' }}
             </v-chip>
+            <v-btn
+              prepend-icon="mdi-download"
+              variant="outlined"
+              color="primary"
+              :disabled="bookmarks.length === 0"
+              @click="exportBookmarks"
+            >
+              Export backup
+            </v-btn>
           </div>
 
           <v-card rounded="lg" border elevation="0" class="pa-4 mb-6">
@@ -220,10 +229,35 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import BookmarkCard from './components/BookmarkCard.vue'
 
-const bookmarks = ref([])
+function loadBookmarks() {
+  try {
+    const savedBookmarks = localStorage.getItem('tabmind-bookmarks')
+    return savedBookmarks ? JSON.parse(savedBookmarks) : []
+  } catch (error) {
+    console.error('Could not load bookmarks:', error)
+    return []
+  }
+}
+
+const bookmarks = ref(loadBookmarks())
+
+watch(
+  bookmarks,
+  (newBookmarks) => {
+    try {
+      localStorage.setItem(
+        'tabmind-bookmarks',
+        JSON.stringify(newBookmarks),
+      )
+    } catch (error) {
+      console.error('Could not save bookmarks:', error)
+    }
+  },
+  { deep: true },
+)
 
 const title = ref('')
 const url = ref('')
@@ -345,5 +379,22 @@ function toggleFavorite(id) {
   if (bookmark) {
     bookmark.favorite = !bookmark.favorite
   }
+}
+
+function exportBookmarks() {
+  const json = JSON.stringify(bookmarks.value, null, 2)
+
+  const blob = new Blob([json], {
+    type: 'application/json',
+  })
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = 'tabmind-backup.json'
+  link.click()
+
+  URL.revokeObjectURL(url)
 }
 </script>
