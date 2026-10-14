@@ -114,9 +114,52 @@
             </v-chip>
           </div>
 
-          <v-row v-if="bookmarks.length > 0">
+          <v-card rounded="lg" border elevation="0" class="pa-4 mb-6">
+            <v-row>
+              <v-col cols="12" md="5">
+                <v-text-field
+                v-model="searchQuery"
+                label="Search bookmarks"
+                placeholder="Title, URL, or tag..."
+                prepend-inner-icon="mdi-magnify"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                clearable
+              />
+              </v-col>
+
+              <v-col cols="12" sm="6" md="4">
+                <v-select
+                  v-model="selectedCategory"
+                  :items="filterCategories"
+                  label="Filter by category"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6" md="3">
+                <v-select
+                  v-model="sortBy"
+                  :items="[
+                    { title: 'Newest first', value: 'newest' },
+                    { title: 'Oldest first', value: 'oldest' },
+                    { title: 'Title A–Z', value: 'title' },
+                  ]"
+                  label="Sort by"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                />
+              </v-col>
+            </v-row>
+          </v-card>
+
+          <v-row v-if="filteredBookmarks.length > 0">
             <v-col
-              v-for="bookmark in bookmarks"
+              v-for="bookmark in filteredBookmarks"
               :key="bookmark.id"
               cols="12"
               sm="6"
@@ -125,12 +168,33 @@
               <BookmarkCard
                 :bookmark="bookmark"
                 @delete="deleteBookmark"
+                @toggle-favorite="toggleFavorite"
               />
             </v-col>
           </v-row>
-
           <v-card
-            v-else
+            v-if="bookmarks.length > 0 && filteredBookmarks.length === 0"
+            rounded="lg"
+            border
+            elevation="0"
+            class="pa-8 text-center"
+          >
+            <v-icon size="40" color="secondary" class="mb-3">
+              mdi-magnify
+            </v-icon>
+
+            <h3 class="text-h6 mb-2">
+              No matching bookmarks
+            </h3>
+
+            <p class="text-body-2 text-medium-emphasis">
+              Try a different search term or category.
+            </p>
+          </v-card>
+
+          <!-- Show when the library is completely empty -->
+          <v-card
+            v-else-if="bookmarks.length === 0"
             rounded="lg"
             border
             elevation="0"
@@ -148,6 +212,7 @@
               Add your first bookmark using the form above.
             </p>
           </v-card>
+
         </section>
       </v-container>
     </v-main>
@@ -155,7 +220,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import BookmarkCard from './components/BookmarkCard.vue'
 
 const bookmarks = ref([])
@@ -173,6 +238,15 @@ const categories = [
   'Learning',
   'Other',
 ]
+
+const searchQuery = ref('')
+const selectedCategory = ref('All')
+const sortBy = ref('newest')
+
+const filterCategories = computed(() => [
+  'All',
+  ...new Set(bookmarks.value.map((bookmark) => bookmark.category)),
+])
 
 function addBookmark() {
   errorMessage.value = ''
@@ -216,6 +290,7 @@ function addBookmark() {
     category: cleanCategory,
     tags,
     favorite: false,
+    createdAt: Date.now(),
   }
 
   bookmarks.value.unshift(bookmark)
@@ -231,5 +306,44 @@ function deleteBookmark(id) {
   bookmarks.value = bookmarks.value.filter(
     (bookmark) => bookmark.id !== id,
   )
+}
+
+const filteredBookmarks = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+
+  const result = bookmarks.value.filter((bookmark) => {
+    const matchesSearch =
+      bookmark.title.toLowerCase().includes(query) ||
+      bookmark.url.toLowerCase().includes(query) ||
+      bookmark.tags.some((tag) => tag.includes(query))
+
+    const matchesCategory =
+      selectedCategory.value === 'All' ||
+      bookmark.category === selectedCategory.value
+
+    return matchesSearch && matchesCategory
+  })
+
+  return result.sort((a, b) => {
+    if (sortBy.value === 'title') {
+      return a.title.localeCompare(b.title)
+    }
+
+    if (sortBy.value === 'oldest') {
+      return a.createdAt - b.createdAt
+    }
+
+    return b.createdAt - a.createdAt
+  })
+})
+
+function toggleFavorite(id) {
+  const bookmark = bookmarks.value.find(
+    (bookmark) => bookmark.id === id,
+  )
+
+  if (bookmark) {
+    bookmark.favorite = !bookmark.favorite
+  }
 }
 </script>

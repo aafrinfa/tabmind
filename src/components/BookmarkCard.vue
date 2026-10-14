@@ -7,7 +7,7 @@ defineProps({
   },
 })
 
-defineEmits(['delete'])
+defineEmits(['delete', 'toggle-favorite'])
 </script>
 
 <template>
@@ -27,15 +27,27 @@ defineEmits(['delete'])
         {{ bookmark.category }}
       </v-card-subtitle>
 
-      <template #append>
-        <v-btn
-          icon="mdi-delete-outline"
-          variant="text"
-          color="error"
-          aria-label="Delete bookmark"
-          @click="$emit('delete', bookmark.id)"
-        />
-      </template>
+
+        <template #append>
+        <div class="d-flex align-center">
+            <v-btn
+            :icon="bookmark.favorite ? 'mdi-star' : 'mdi-star-outline'"
+            variant="text"
+            :color="bookmark.favorite ? 'amber-darken-2' : 'default'"
+            :aria-label="bookmark.favorite ? 'Remove from favorites' : 'Add to favorites'"
+            @click="$emit('toggle-favorite', bookmark.id)"
+            />
+
+            <v-btn
+            icon="mdi-delete-outline"
+            variant="text"
+            color="error"
+            aria-label="Delete bookmark"
+            @click="$emit('delete', bookmark.id)"
+            />
+        </div>
+        </template>
+
     </v-card-item>
 
     <v-card-text>
